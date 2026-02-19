@@ -48,6 +48,7 @@
     .rule-gun { color: #ffa502; }
     .rule-mine { color: #ff6b81; }
     .rule-medkit { color: #2ed573; }
+    .rule-moneybag { color: #00cec9; }
     .rule-pvp { color: #ff4757; }
 
     /* UI 覆盖层 */
@@ -84,6 +85,21 @@
         font-size: 24px;
         font-weight: bold;
         color: #ffa502;
+    }
+
+    #game-mode-display {
+        position: absolute;
+        top: 50px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.7);
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-size: 14px;
+        color: #00cec9;
+        border: 2px solid #00cec9;
+        z-index: 6;
+        display: none;
     }
 
     #pause-overlay {
@@ -197,6 +213,8 @@
         z-index: 20;
         text-align: center;
         box-shadow: 0 0 30px rgba(255, 165, 2, 0.3);
+        max-height: 90vh;
+        overflow-y: auto;
     }
 
     #settings-panel h2 {
@@ -236,26 +254,27 @@
         border-color: #ffa502;
     }
 
-    .time-presets, .map-presets {
+    .time-presets, .map-presets, .mode-presets {
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
         justify-content: center;
     }
 
-    .time-presets button, .map-presets button {
+    .time-presets button, .map-presets button, .mode-presets button {
         padding: 8px 16px;
         font-size: 14px;
         background-color: #444;
         box-shadow: 0 3px 0 #333;
         border-radius: 8px;
+        cursor: pointer;
     }
 
-    .time-presets button:hover, .map-presets button:hover {
+    .time-presets button:hover, .map-presets button:hover, .mode-presets button:hover {
         background-color: #555;
     }
 
-    .time-presets button.active, .map-presets button.active {
+    .time-presets button.active, .map-presets button.active, .mode-presets button.active {
         background-color: #ffa502;
         box-shadow: 0 3px 0 #cc8400;
     }
@@ -332,8 +351,78 @@
         font-size: 12px;
         color: #aaa;
     }
+
+    /* 音效开关 */
+    .sound-toggle {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.6);
+        border: 2px solid #444;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        z-index: 100;
+        transition: all 0.2s;
+    }
+
+    .sound-toggle:hover {
+        border-color: #ffa502;
+        transform: scale(1.1);
+    }
+
+    .sound-toggle.muted {
+        opacity: 0.5;
+    }
+
+    /* 模式选择样式 */
+    .mode-card {
+        width: 140px;
+        padding: 15px;
+        background: #2a2a4a;
+        border: 2px solid #444;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .mode-card:hover {
+        border-color: #00cec9;
+        transform: scale(1.05);
+    }
+
+    .mode-card.active {
+        border-color: #00cec9;
+        background: #2a4a4a;
+        box-shadow: 0 0 15px rgba(0, 206, 201, 0.3);
+    }
+
+    .mode-card .icon {
+        font-size: 36px;
+        margin-bottom: 5px;
+    }
+
+    .mode-card .name {
+        font-size: 14px;
+        color: #fff;
+        font-weight: bold;
+    }
+
+    .mode-card .desc {
+        font-size: 11px;
+        color: #888;
+        margin-top: 5px;
+    }
 </style>
 </head> <body>
+<!-- 音效开关按钮 -->
+<div class="sound-toggle" id="sound-toggle" onclick="toggleSound()" title="开关音效">🔊</div>
+
 <!-- 玩法简介 -->
 <div id="game-rules">
     <h3>🎮 游戏玩法简介</h3>
@@ -344,12 +433,14 @@
         &nbsp;&nbsp;|&nbsp;&nbsp;
         <span class="rule-medkit">🏥 治疗包</span> - 触碰白色红十字恢复 <span class="rule-highlight">10% 血量</span>，最多4个
         &nbsp;&nbsp;|&nbsp;&nbsp;
+        <span class="rule-moneybag">💎 加钱器</span> - 触碰青色钱袋增加 <span class="rule-highlight">10% 金币</span>，最多1个
+        &nbsp;&nbsp;|&nbsp;&nbsp;
         <span class="rule-mine">💣 躲避地雷</span> - 触碰红色地雷扣除 <span class="rule-highlight">20% 血量</span>，地雷消失
         &nbsp;&nbsp;|&nbsp;&nbsp;
         <span class="rule-pvp">⚔️ 击败对手</span> - 子弹击中对方扣除 <span class="rule-highlight">20% 血量</span>，4 次即淘汰
     </p>
     <p style="font-size: 12px; color: #666;">
-        🏆 获胜条件：击败对手 或 时间结束时金币更多 | 🗺️ 多张地图可选
+        🏆 获胜条件：击败对手 或 时间结束时金币更多 | 🗺️ 多张地图可选 | 🎵 点击音效
     </p>
 </div>
 
@@ -361,6 +452,8 @@
         <div id="timer">02:00</div>
         <div id="p2-score" class="score-box">🔵 蓝方金币：<span id="score2">0</span></div>
     </div>
+
+    <div id="game-mode-display">🪙 经典模式</div>
 
     <div id="pause-overlay">
         <h2>PAUSED</h2>
@@ -376,6 +469,24 @@
     <!-- 游戏设置面板 -->
     <div id="settings-panel">
         <h2>⚙️ 游戏设置</h2>
+        
+        <div class="setting-section">
+            <h3>🎯 游戏模式</h3>
+            <div class="setting-row" style="flex-direction: column;">
+                <div class="mode-presets" id="mode-buttons">
+                    <div class="mode-card active" onclick="selectMode(0)" data-mode="0">
+                        <div class="icon">🪙</div>
+                        <div class="name">经典模式</div>
+                        <div class="desc">有金币收集</div>
+                    </div>
+                    <div class="mode-card" onclick="selectMode(1)" data-mode="1">
+                        <div class="icon">⚔️</div>
+                        <div class="name">无金币模式</div>
+                        <div class="desc">纯战斗竞技</div>
+                    </div>
+                </div>
+            </div>
+        </div>
         
         <div class="setting-section">
             <h3>📍 选择地图</h3>
@@ -402,7 +513,7 @@
             </div>
         </div>
         
-        <p class="setting-note">⚠️ 时间范围：1-10 分钟 | 障碍物会阻挡玩家和子弹</p>
+        <p class="setting-note">⚠️ 时间范围：1-10 分钟 | 障碍物会阻挡玩家和子弹 | 🔊 音效可开关</p>
         <button id="start-btn" onclick="startGameWithSettings()">🎮 开始游戏</button>
     </div>
 </div>
@@ -419,6 +530,106 @@
     <span style="color:#aaa">⏸️ 暂停</span>：<span class="key-highlight">P</span>
 </div>
 <script>
+// --- 音效系统 ---
+const SoundManager = {
+    enabled: true,
+    audioContext: null,
+    
+    init() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch(e) {
+            console.log('Web Audio API not supported');
+        }
+    },
+    
+    play(type) {
+        if (!this.enabled || !this.audioContext) return;
+        
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        
+        const now = this.audioContext.currentTime;
+        
+        switch(type) {
+            case 'click':
+                oscillator.frequency.setValueAtTime(800, now);
+                oscillator.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+                gainNode.gain.setValueAtTime(0.3, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                oscillator.start(now);
+                oscillator.stop(now + 0.1);
+                break;
+            case 'coin':
+                oscillator.frequency.setValueAtTime(1200, now);
+                oscillator.frequency.setValueAtTime(1600, now + 0.1);
+                gainNode.gain.setValueAtTime(0.3, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                oscillator.start(now);
+                oscillator.stop(now + 0.2);
+                break;
+            case 'shoot':
+                oscillator.type = 'square';
+                oscillator.frequency.setValueAtTime(200, now);
+                oscillator.frequency.exponentialRampToValueAtTime(50, now + 0.15);
+                gainNode.gain.setValueAtTime(0.2, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                oscillator.start(now);
+                oscillator.stop(now + 0.15);
+                break;
+            case 'hit':
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(150, now);
+                oscillator.frequency.exponentialRampToValueAtTime(80, now + 0.2);
+                gainNode.gain.setValueAtTime(0.3, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                oscillator.start(now);
+                oscillator.stop(now + 0.2);
+                break;
+            case 'powerup':
+                oscillator.frequency.setValueAtTime(400, now);
+                oscillator.frequency.setValueAtTime(600, now + 0.1);
+                oscillator.frequency.setValueAtTime(800, now + 0.2);
+                gainNode.gain.setValueAtTime(0.3, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                oscillator.start(now);
+                oscillator.stop(now + 0.3);
+                break;
+            case 'moneybag':
+                oscillator.frequency.setValueAtTime(800, now);
+                oscillator.frequency.setValueAtTime(1000, now + 0.1);
+                oscillator.frequency.setValueAtTime(1200, now + 0.15);
+                oscillator.frequency.setValueAtTime(1500, now + 0.2);
+                gainNode.gain.setValueAtTime(0.25, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                oscillator.start(now);
+                oscillator.stop(now + 0.3);
+                break;
+            case 'gameover':
+                oscillator.type = 'triangle';
+                oscillator.frequency.setValueAtTime(400, now);
+                oscillator.frequency.setValueAtTime(300, now + 0.2);
+                oscillator.frequency.setValueAtTime(200, now + 0.4);
+                gainNode.gain.setValueAtTime(0.4, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                oscillator.start(now);
+                oscillator.stop(now + 0.6);
+                break;
+        }
+    }
+};
+
+function toggleSound() {
+    SoundManager.enabled = !SoundManager.enabled;
+    const toggle = document.getElementById('sound-toggle');
+    toggle.textContent = SoundManager.enabled ? '🔊' : '🔇';
+    toggle.classList.toggle('muted', !SoundManager.enabled);
+    SoundManager.play('click');
+}
+
 // --- 游戏配置与状态 ---
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -434,28 +645,24 @@ const MAX_HP = 100;
 const DAMAGE = 20;
 const MINE_DAMAGE = 20;
 const MEDKIT_HEAL = 10;
+const MONEYBAG_BONUS = 0.1;  // 加钱器增加10%金币
 const ITEM_RADIUS = 12;
 const MAX_MINES = 3;
 const MAX_MEDKITS = 4;
+const MAX_MONEYBAGS = 1;  // 【新增】加钱器最大数量
 const COIN_PICKUP_RADIUS = PLAYER_RADIUS + ITEM_RADIUS + 5;
 
 let GAME_DURATION = 120;
 let selectedMapIndex = 0;
+let selectedModeIndex = 0;  // 0=经典模式，1=无金币模式
 
 // --- 地图定义 ---
 const MAPS = [
+    { name: "经典", icon: "🏠", obstacles: [] },
     {
-        name: "经典",
-        icon: "🏠",
-        obstacles: []  // 无障碍物
-    },
-    {
-        name: "城堡",
-        icon: "🏰",
+        name: "城堡", icon: "🏰",
         obstacles: [
-            // 中央城堡结构
             { x: 350, y: 250, w: 100, h: 100 },
-            // 四个角楼
             { x: 150, y: 100, w: 60, h: 60 },
             { x: 590, y: 100, w: 60, h: 60 },
             { x: 150, y: 440, w: 60, h: 60 },
@@ -463,50 +670,46 @@ const MAPS = [
         ]
     },
     {
-        name: "迷宫",
-        icon: "🌀",
+        name: "迷宫", icon: "🌀",
         obstacles: [
-            // 横向墙壁
             { x: 100, y: 150, w: 200, h: 30 },
             { x: 500, y: 150, w: 200, h: 30 },
             { x: 100, y: 300, w: 150, h: 30 },
             { x: 350, y: 300, w: 300, h: 30 },
             { x: 100, y: 450, w: 200, h: 30 },
             { x: 500, y: 450, w: 200, h: 30 },
-            // 纵向墙壁
             { x: 300, y: 100, w: 30, h: 100 },
             { x: 470, y: 400, w: 30, h: 100 }
         ]
     },
     {
-        name: "战场",
-        icon: "⚔️",
+        name: "战场", icon: "⚔️",
         obstacles: [
-            // 中央掩体
             { x: 200, y: 280, w: 40, h: 40 },
             { x: 380, y: 280, w: 40, h: 40 },
             { x: 560, y: 280, w: 40, h: 40 },
-            // 上下掩体
             { x: 300, y: 100, w: 200, h: 30 },
             { x: 300, y: 470, w: 200, h: 30 },
-            // 两侧掩体
             { x: 50, y: 250, w: 30, h: 100 },
             { x: 720, y: 250, w: 30, h: 100 }
         ]
     },
     {
-        name: "四角",
-        icon: "🔷",
+        name: "四角", icon: "🔷",
         obstacles: [
-            // 四个大障碍物
             { x: 100, y: 100, w: 120, h: 120 },
             { x: 580, y: 100, w: 120, h: 120 },
             { x: 100, y: 380, w: 120, h: 120 },
             { x: 580, y: 380, w: 120, h: 120 },
-            // 中央小障碍
             { x: 370, y: 270, w: 60, h: 60 }
         ]
     }
+];
+
+// 游戏模式定义
+const GAME_MODES = [
+    { name: "经典模式", icon: "🪙", hasCoins: true },
+    { name: "无金币模式", icon: "⚔️", hasCoins: false }
 ];
 
 let gameState = {
@@ -524,6 +727,7 @@ let coinEffects = [];
 let obstacles = [];
 let mineSpawnInterval = null;
 let medkitSpawnInterval = null;
+let moneybagSpawnInterval = null;  // 【新增】加钱器生成定时器
 
 // --- 类定义 ---
 class Player {
@@ -559,15 +763,12 @@ class Player {
             this.lastDirY = this.vy / len;
         }
 
-        // 【新增】尝试移动并检测障碍物碰撞
         let newX = this.x + this.vx;
         let newY = this.y + this.vy;
 
-        // X轴碰撞检测
         if (this.checkObstacleCollision(newX, this.y)) {
             newX = this.x;
         }
-        // Y轴碰撞检测
         if (this.checkObstacleCollision(this.x, newY)) {
             newY = this.y;
         }
@@ -575,7 +776,6 @@ class Player {
         this.x = newX;
         this.y = newY;
 
-        // 边界检测
         if (this.x - PLAYER_RADIUS < 0) this.x = PLAYER_RADIUS;
         if (this.x + PLAYER_RADIUS > canvas.width) this.x = canvas.width - PLAYER_RADIUS;
         if (this.y - PLAYER_RADIUS < 0) this.y = PLAYER_RADIUS;
@@ -595,10 +795,8 @@ class Player {
         }
     }
 
-    // 【新增】检测玩家与障碍物碰撞
     checkObstacleCollision(x, y) {
         for (let obs of obstacles) {
-            // 圆形玩家与矩形障碍物碰撞检测
             const closestX = Math.max(obs.x, Math.min(x, obs.x + obs.w));
             const closestY = Math.max(obs.y, Math.min(y, obs.y + obs.h));
             const distX = x - closestX;
@@ -621,6 +819,7 @@ class Player {
             this.id
         ));
         this.shootCooldown = COOLDOWN_TIME;
+        SoundManager.play('shoot');  // 【新增】射击音效
     }
 
     draw() {
@@ -673,13 +872,11 @@ class Bullet {
         this.x += this.vx;
         this.y += this.vy;
         
-        // 边界检测
         if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
             this.active = false;
             return;
         }
         
-        // 【新增】检测子弹与障碍物碰撞
         for (let obs of obstacles) {
             if (this.x > obs.x && this.x < obs.x + obs.w &&
                 this.y > obs.y && this.y < obs.y + obs.h) {
@@ -721,8 +918,8 @@ class CoinEffect {
         ctx.strokeStyle = this.color;
         ctx.lineWidth = 2;
         ctx.font = 'bold 16px Arial';
-        ctx.strokeText(this.text, this.x - 15, this.y);
-        ctx.fillText(this.text, this.x - 15, this.y);
+        ctx.strokeText(this.text, this.x - 20, this.y);
+        ctx.fillText(this.text, this.x - 20, this.y);
     }
 }
 
@@ -737,6 +934,7 @@ function setTime(minutes) {
             btn.classList.add('active');
         }
     });
+    SoundManager.play('click');
 }
 
 function selectMap(index) {
@@ -749,8 +947,20 @@ function selectMap(index) {
         }
     });
     
-    // 更新地图预览
     renderMapPreview();
+    SoundManager.play('click');
+}
+
+function selectMode(index) {
+    selectedModeIndex = index;
+    
+    document.querySelectorAll('.mode-card').forEach(card => {
+        card.classList.remove('active');
+        if (parseInt(card.dataset.mode) === index) {
+            card.classList.add('active');
+        }
+    });
+    SoundManager.play('click');
 }
 
 function renderMapPreview() {
@@ -763,23 +973,15 @@ function renderMapPreview() {
     previewCanvas.height = 60;
     const pCtx = previewCanvas.getContext('2d');
     
-    // 绘制背景
     pCtx.fillStyle = '#1a1a2e';
     pCtx.fillRect(0, 0, 120, 60);
     
-    // 绘制障碍物预览
     pCtx.fillStyle = '#666';
     map.obstacles.forEach(obs => {
         const scale = 0.15;
-        pCtx.fillRect(
-            obs.x * scale,
-            obs.y * scale,
-            obs.w * scale,
-            obs.h * scale
-        );
+        pCtx.fillRect(obs.x * scale, obs.y * scale, obs.w * scale, obs.h * scale);
     });
     
-    // 绘制玩家起始位置
     pCtx.fillStyle = '#ff4757';
     pCtx.beginPath();
     pCtx.arc(15, 30, 4, 0, Math.PI * 2);
@@ -792,7 +994,6 @@ function renderMapPreview() {
     
     const card = document.createElement('div');
     card.className = 'map-card active';
-    card.innerHTML = '';
     card.appendChild(previewCanvas);
     const nameP = document.createElement('p');
     nameP.textContent = `${map.icon} ${map.name} (${map.obstacles.length}个障碍)`;
@@ -812,12 +1013,17 @@ function startGameWithSettings() {
     
     document.getElementById('settings-panel').style.display = 'none';
     
+    // 初始化音效
+    SoundManager.init();
+    
     initGame();
+    SoundManager.play('click');
 }
 
 function showSettings() {
     document.getElementById('game-over-modal').style.display = 'none';
     document.getElementById('settings-panel').style.display = 'block';
+    document.getElementById('game-mode-display').style.display = 'none';
     
     const currentMinutes = Math.round(GAME_DURATION / 60);
     document.getElementById('game-time').value = currentMinutes;
@@ -830,13 +1036,13 @@ function showSettings() {
     });
     
     renderMapPreview();
+    SoundManager.play('click');
 }
 
 // --- 游戏逻辑函数 ---
 function initGame() {
-    // 【新增】加载选定地图的障碍物
     const selectedMap = MAPS[selectedMapIndex];
-    obstacles = selectedMap.obstacles.map(obs => ({...obs}));  // 深拷贝
+    obstacles = selectedMap.obstacles.map(obs => ({...obs}));
     
     players = [
         new Player(1, 100, 300, '#ff4757', { up: 'w', down: 's', left: 'a', right: 'd', shoot: ' ' }),
@@ -849,9 +1055,13 @@ function initGame() {
     gameState.isRunning = true;
     gameState.isPaused = false;
 
-    spawnItem('coin');
-    spawnItem('coin');
-    spawnItem('coin');
+    // 根据模式决定是否生成金币
+    const mode = GAME_MODES[selectedModeIndex];
+    if (mode.hasCoins) {
+        spawnItem('coin');
+        spawnItem('coin');
+        spawnItem('coin');
+    }
     spawnItem('gun');
     
     for (let i = 0; i < MAX_MINES; i++) {
@@ -861,10 +1071,16 @@ function initGame() {
     for (let i = 0; i < MAX_MEDKITS; i++) {
         spawnItem('medkit');
     }
+    
+    // 【新增】初始生成加钱器
+    if (mode.hasCoins) {
+        spawnItem('moneybag');
+    }
 
     if (gameState.timerInterval) clearInterval(gameState.timerInterval);
     if (mineSpawnInterval) clearInterval(mineSpawnInterval);
     if (medkitSpawnInterval) clearInterval(medkitSpawnInterval);
+    if (moneybagSpawnInterval) clearInterval(moneybagSpawnInterval);
 
     gameState.timerInterval = setInterval(() => {
         if (gameState.isRunning && !gameState.isPaused) {
@@ -891,6 +1107,21 @@ function initGame() {
             }
         }
     }, 8000);
+    
+    // 【新增】加钱器生成定时器（每10秒尝试生成）
+    moneybagSpawnInterval = setInterval(() => {
+        if (gameState.isRunning && !gameState.isPaused && mode.hasCoins) {
+            const currentMoneybags = getCurrentItemCount('moneybag');
+            if (currentMoneybags < MAX_MONEYBAGS) {
+                spawnItem('moneybag');
+            }
+        }
+    }, 10000);
+
+    // 显示当前模式
+    const modeDisplay = document.getElementById('game-mode-display');
+    modeDisplay.textContent = `${mode.icon} ${mode.name}`;
+    modeDisplay.style.display = 'block';
 
     document.getElementById('game-over-modal').style.display = 'none';
     document.getElementById('pause-overlay').style.display = 'none';
@@ -904,20 +1135,29 @@ function getCurrentItemCount(type) {
 }
 
 function spawnItem(type) {
+    const mode = GAME_MODES[selectedModeIndex];
+    
+    // 无金币模式不生成金币和加钱器
+    if (!mode.hasCoins && (type === 'coin' || type === 'moneybag')) {
+        return;
+    }
+    
     if (type === 'mine' && getCurrentItemCount('mine') >= MAX_MINES) {
         return;
     }
     if (type === 'medkit' && getCurrentItemCount('medkit') >= MAX_MEDKITS) {
         return;
     }
+    if (type === 'moneybag' && getCurrentItemCount('moneybag') >= MAX_MONEYBAGS) {
+        return;
+    }
 
     let valid = false, x, y, attempts = 0;
-    while (!valid && attempts < 150) {  // 增加尝试次数
+    while (!valid && attempts < 150) {
         x = 60 + Math.random() * (canvas.width - 120);
         y = 60 + Math.random() * (canvas.height - 120);
         valid = true;
         
-        // 检查与玩家距离
         for (let p of players) {
             const dist = Math.hypot(p.x - x, p.y - y);
             if (dist < PLAYER_RADIUS + ITEM_RADIUS + 50) {
@@ -926,7 +1166,6 @@ function spawnItem(type) {
             }
         }
         
-        // 【新增】检查是否在障碍物内部
         for (let obs of obstacles) {
             if (x > obs.x - ITEM_RADIUS && x < obs.x + obs.w + ITEM_RADIUS &&
                 y > obs.y - ITEM_RADIUS && y < obs.y + obs.h + ITEM_RADIUS) {
@@ -935,7 +1174,6 @@ function spawnItem(type) {
             }
         }
         
-        // 检查与其他物品距离
         for (let item of items) {
             if (item.collected) continue;
             if (Math.hypot(item.x - x, item.y - y) < ITEM_RADIUS * 3) {
@@ -952,6 +1190,8 @@ function spawnItem(type) {
 }
 
 function checkCollisions() {
+    const mode = GAME_MODES[selectedModeIndex];
+    
     players.forEach(p => {
         for (let i = items.length - 1; i >= 0; i--) {
             const item = items[i];
@@ -960,12 +1200,13 @@ function checkCollisions() {
             const dist = Math.hypot(p.x - item.x, p.y - item.y);
             
             if (dist < COIN_PICKUP_RADIUS) {
-                if (item.type === 'coin') {
+                if (item.type === 'coin' && mode.hasCoins) {
                     item.collected = true;
                     p.score++;
                     coinEffects.push(new CoinEffect(item.x, item.y, '+1', '#ffd32a'));
                     items.splice(i, 1);
                     updateUI();
+                    SoundManager.play('coin');
                     setTimeout(() => {
                         if (gameState.isRunning && !gameState.isPaused) {
                             spawnItem('coin');
@@ -978,6 +1219,7 @@ function checkCollisions() {
                     p.gunTimer = GUN_DURATION;
                     items.splice(i, 1);
                     spawnItem('gun');
+                    SoundManager.play('powerup');
                     
                 } else if (item.type === 'mine') {
                     if (p.invulnerable <= 0) {
@@ -992,6 +1234,7 @@ function checkCollisions() {
                         }
                         items.splice(i, 1);
                         updateUI();
+                        SoundManager.play('hit');
                     }
                     
                 } else if (item.type === 'medkit') {
@@ -1001,7 +1244,18 @@ function checkCollisions() {
                         coinEffects.push(new CoinEffect(item.x, item.y, '+10%', '#2ed573'));
                         items.splice(i, 1);
                         updateUI();
+                        SoundManager.play('powerup');
                     }
+                    
+                } else if (item.type === 'moneybag' && mode.hasCoins) {  // 【新增】加钱器碰撞
+                    item.collected = true;
+                    const bonus = Math.floor(p.score * MONEYBAG_BONUS);
+                    const actualBonus = Math.max(1, bonus);  // 至少增加1金币
+                    p.score += actualBonus;
+                    coinEffects.push(new CoinEffect(item.x, item.y, `+${actualBonus}`, '#00cec9'));
+                    items.splice(i, 1);
+                    updateUI();
+                    SoundManager.play('moneybag');
                 }
             }
         }
@@ -1018,6 +1272,7 @@ function checkCollisions() {
                     endGame('kill', b.ownerId);
                 }
                 updateUI();
+                SoundManager.play('hit');
             }
         });
     });
@@ -1050,6 +1305,7 @@ function togglePause() {
     if (!gameState.isRunning) return;
     gameState.isPaused = !gameState.isPaused;
     document.getElementById('pause-overlay').style.display = gameState.isPaused ? 'flex' : 'none';
+    SoundManager.play('click');
 }
 
 function endGame(reason, winnerId = null) {
@@ -1058,12 +1314,16 @@ function endGame(reason, winnerId = null) {
     clearInterval(gameState.timerInterval);
     clearInterval(mineSpawnInterval);
     clearInterval(medkitSpawnInterval);
+    clearInterval(moneybagSpawnInterval);
     document.getElementById('pause-overlay').style.display = 'none';
+    document.getElementById('game-mode-display').style.display = 'none';
     
     const modal = document.getElementById('game-over-modal');
     const title = document.getElementById('winner-text');
     const reasonText = document.getElementById('win-reason');
     modal.style.display = 'flex';
+
+    SoundManager.play('gameover');
 
     if (reason === 'kill') {
         const winnerName = winnerId === 1 ? "红方" : "蓝方";
@@ -1136,22 +1396,18 @@ function gameLoop() {
         coinEffects = coinEffects.filter(effect => effect.life > 0);
     }
 
-    // 【新增】绘制障碍物
+    // 绘制障碍物
     obstacles.forEach(obs => {
-        // 障碍物主体
         ctx.fillStyle = '#4a4a6a';
         ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
         
-        // 边框
         ctx.strokeStyle = '#6a6a8a';
         ctx.lineWidth = 3;
         ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
         
-        // 顶部高光
         ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.fillRect(obs.x, obs.y, obs.w, 5);
         
-        // 纹理效果
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
         ctx.lineWidth = 1;
         for (let i = 0; i < obs.w; i += 15) {
@@ -1240,6 +1496,36 @@ function gameLoop() {
             ctx.beginPath();
             ctx.arc(item.x, item.y, ITEM_RADIUS + pulse, 0, Math.PI * 2);
             ctx.strokeStyle = 'rgba(46, 213, 115, 0.4)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            
+        } else if (item.type === 'moneybag') {  // 【新增】绘制加钱器
+            // 外圈光晕
+            const glow = 6 + Math.sin(Date.now() / 180) * 3;
+            ctx.beginPath();
+            ctx.arc(item.x, item.y, ITEM_RADIUS + glow, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 206, 201, 0.3)';
+            ctx.fill();
+            
+            // 钱袋主体
+            ctx.beginPath();
+            ctx.arc(item.x, item.y, ITEM_RADIUS, 0, Math.PI * 2);
+            ctx.fillStyle = '#00cec9';
+            ctx.fill();
+            ctx.strokeStyle = '#00b5b0';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // 钱袋符号
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText("💰", item.x - 7, item.y + 5);
+            
+            // 脉冲效果
+            const pulse = 3 + Math.sin(Date.now() / 150) * 2;
+            ctx.beginPath();
+            ctx.arc(item.x, item.y, ITEM_RADIUS + pulse, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(0, 206, 201, 0.5)';
             ctx.lineWidth = 1;
             ctx.stroke();
         }
